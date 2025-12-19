@@ -1,13 +1,13 @@
 import React from "react";
 import Card from "../../../shared/ui/Card";
 import Tag from "../../../shared/ui/Tag";
-import { useAppStore } from "../../../app/store";
+import { useRequestsQuery, useMessagesQuery, useOrdersQuery } from "../../../services/hooks";
 import { formatDateTime } from "../../../shared/lib/format";
 
 export default function DashboardPage() {
-  const requests = useAppStore((s) => s.requests);
-  const messages = useAppStore((s) => s.messages);
-  const orders = useAppStore((s) => s.orders);
+  const { data: requests = [] } = useRequestsQuery();
+  const { data: messages = [] } = useMessagesQuery();
+  const { data: orders = [] } = useOrdersQuery();
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

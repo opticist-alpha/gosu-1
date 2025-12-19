@@ -4,10 +4,11 @@ import Card from "../../shared/ui/Card";
 import Button from "../../shared/ui/Button";
 import { useAppStore } from "../../app/store";
 import { formatKRW } from "../../shared/lib/format";
+import { useRequestsQuery } from "../../services/hooks";
 
 export default function HomePage() {
   const pros = useAppStore((s) => s.pros);
-  const requests = useAppStore((s) => s.requests);
+  const { data: requests = [], isLoading } = useRequestsQuery();
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -43,17 +44,22 @@ export default function HomePage() {
       </Card>
 
       <Card title="최근 요청" action={<Link className="text-sm text-blue-600" to="/requests">전체 보기</Link>}>
-        <ul className="space-y-2">
-          {requests.map((req) => (
-            <li key={req.id} className="text-sm">
-              <div className="flex items-center justify-between">
-                <span className="font-medium">{req.description}</span>
-                <span className="text-xs text-slate-500">{req.createdAt}</span>
-              </div>
-              <p className="text-xs text-slate-600">{req.region} · 상태: {req.status}</p>
-            </li>
-          ))}
-        </ul>
+        {isLoading ? (
+          <p className="text-sm text-slate-600">요청을 불러오는 중...</p>
+        ) : (
+          <ul className="space-y-2">
+            {requests.map((req) => (
+              <li key={req.id} className="text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">{req.description}</span>
+                  <span className="text-xs text-slate-500">{req.createdAt}</span>
+                </div>
+                <p className="text-xs text-slate-600">{req.region} · 상태: {req.status}</p>
+              </li>
+            ))}
+            {requests.length === 0 && <p className="text-sm text-slate-600">최근 요청이 없습니다.</p>}
+          </ul>
+        )}
       </Card>
     </div>
   );
