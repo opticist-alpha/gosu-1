@@ -4,6 +4,7 @@ import ProCard from "./ProCard";
 import { useAppStore } from "../../../app/store";
 import { scoreMatch } from "../../../shared/lib/match";
 import Card from "../../../shared/ui/Card";
+import { useSendMessageMutation } from "../../../services/hooks";
 
 export default function ProsPage() {
   const pros = useAppStore((s) => s.pros);
@@ -11,7 +12,7 @@ export default function ProsPage() {
   const [query, setQuery] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [region, setRegion] = useState("");
-  const addMessage = useAppStore((s) => s.addMessage);
+  const sendMessage = useSendMessageMutation();
 
   const sortedPros = useMemo(() => {
     const base = pros.map((pro) => ({ pro, score: scoreMatch({ pro, categoryId, query, region }) }));
@@ -24,7 +25,7 @@ export default function ProsPage() {
       .map((item) => item.pro);
   }, [pros, categoryId, query, region]);
 
-  const handleMessage = (pro) => addMessage(pro.id, "견적 문의 드려요!");
+  const handleMessage = (pro) => sendMessage.mutate({ threadId: pro.id, from: "나", text: "견적 문의 드려요!" });
 
   return (
     <div className="space-y-4">
