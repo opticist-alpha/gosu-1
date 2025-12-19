@@ -26,6 +26,8 @@ import {
   type ServiceOrder,
   type ServiceRequest,
 } from "./schemas";
+import { getAccessToken, setAccessToken, withRefreshLock } from "./authSession";
+import { logAuthEvent } from "./authEvents";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -64,6 +66,36 @@ export class ApiError extends Error {
 }
 
 const defaultHeaders = { "Content-Type": "application/json" } as const;
+const authBaseUrl = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
+
+async function refreshAccessToken() {
+  return withRefreshLock(async () => {
+    try {
+      const res = await fetch(`${authBaseUrl}/auth/refresh`, {
+        method: "POST",
+        credentials: "include",
+        headers: defaultHeaders,
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new ApiError(text || res.statusText, res.status, `${authBaseUrl}/auth/refresh`);
+      }
+      const data = await res.json();
+      if (data?.accessToken) {
+        setAccessToken(data.accessToken);
+      }
+      return data?.accessToken || null;
+    } catch (error) {
+      logAuthEvent({ type: "token_refresh_failed", message: error?.message || "토큰 갱신 실패" });
+      window.dispatchEvent(
+        new CustomEvent("auth:force-signout", {
+          detail: { message: "세션이 만료되어 로그아웃되었습니다." },
+        })
+      );
+      return null;
+    }
+  });
+}
 
 async function request<T>(
   url: string,
@@ -76,11 +108,44 @@ async function request<T>(
 
   while (attempt <= retries) {
     try {
+      const accessToken = getAccessToken();
+      const headers = {
+        ...defaultHeaders,
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      };
+
       const res = await fetch(url, {
         method,
-        headers: defaultHeaders,
+        credentials: "include",
+        headers,
         body: body ? (typeof body === "string" ? body : JSON.stringify(body)) : undefined,
       });
+
+      if (res.status === 401) {
+        const refreshedToken = await refreshAccessToken();
+        if (refreshedToken) {
+          const retryHeaders = {
+            ...headers,
+            Authorization: `Bearer ${refreshedToken}`,
+          };
+          const retryRes = await fetch(url, {
+            method,
+            credentials: "include",
+            headers: retryHeaders,
+            body: body ? (typeof body === "string" ? body : JSON.stringify(body)) : undefined,
+          });
+          if (!retryRes.ok) {
+            const text = await retryRes.text();
+            throw new ApiError(text || retryRes.statusText, retryRes.status, url);
+          }
+          if (retryRes.status === 204 || schema === null) {
+            // @ts-expect-error allow void return
+            return undefined;
+          }
+          const json = await retryRes.json();
+          return schema ? schema.parse(json) : (json as T);
+        }
+      }
 
       if (!res.ok) {
         const text = await res.text();
@@ -96,6 +161,9 @@ async function request<T>(
       return schema ? schema.parse(json) : (json as T);
     } catch (error) {
       lastError = error;
+      if (error instanceof ApiError && error.status === 401) {
+        logAuthEvent({ type: "token_invalid", message: "인증 정보가 만료되었습니다." });
+      }
       console.error(`[api] ${method} ${url} failed (attempt ${attempt + 1})`, error);
       if (attempt === retries) break;
       await new Promise((resolve) => setTimeout(resolve, 300 * (attempt + 1)));

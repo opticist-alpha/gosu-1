@@ -1,5 +1,7 @@
 import React from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
+import AuthStatus from "../features/auth/components/AuthStatus";
+import SecurityBanner from "../features/auth/components/SecurityBanner";
 
 const navItems = [
   { to: "/", label: "홈" },
@@ -18,25 +20,29 @@ export default function App() {
           <Link to="/" className="text-lg font-bold text-blue-600">
             Gosu
           </Link>
-          <nav className="flex gap-3 text-sm font-medium text-slate-700">
-            {navItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  isActive
-                    ? "rounded px-3 py-1 bg-blue-50 text-blue-700"
-                    : "rounded px-3 py-1 hover:bg-slate-100"
-                }
-                end={item.to === "/"}
-              >
-                {item.label}
-              </NavLink>
-            ))}
-          </nav>
+          <div className="flex items-center gap-6">
+            <nav className="flex gap-3 text-sm font-medium text-slate-700">
+              {navItems.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) =>
+                    isActive
+                      ? "rounded px-3 py-1 bg-blue-50 text-blue-700"
+                      : "rounded px-3 py-1 hover:bg-slate-100"
+                  }
+                  end={item.to === "/"}
+                >
+                  {item.label}
+                </NavLink>
+              ))}
+            </nav>
+            <AuthStatus />
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-4 py-6">
+        <SecurityBanner />
         <Outlet />
       </main>
       <footer className="border-t border-slate-200 bg-white py-4 text-center text-sm text-slate-500">

@@ -8,6 +8,8 @@ import MessagesPage from "../features/messages/components/MessagesPage";
 import OrdersPage from "../features/orders/components/OrdersPage";
 import DashboardPage from "../features/pros/components/DashboardPage";
 import ErrorBoundary from "./ErrorBoundary";
+import AuthPage from "../features/auth/components/AuthPage";
+import RequireAuth from "../features/auth/components/RequireAuth";
 
 export const router = createBrowserRouter([
   {
@@ -17,10 +19,39 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <HomePage /> },
       { path: "pros", element: <ProsPage /> },
-      { path: "requests", element: <RequestPage /> },
-      { path: "messages", element: <MessagesPage /> },
-      { path: "orders", element: <OrdersPage /> },
-      { path: "dashboard", element: <DashboardPage /> },
+      { path: "auth", element: <AuthPage /> },
+      {
+        path: "requests",
+        element: (
+          <RequireAuth roles={["customer"]}>
+            <RequestPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "messages",
+        element: (
+          <RequireAuth>
+            <MessagesPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "orders",
+        element: (
+          <RequireAuth roles={["customer", "pro"]}>
+            <OrdersPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "dashboard",
+        element: (
+          <RequireAuth roles={["pro"]}>
+            <DashboardPage />
+          </RequireAuth>
+        ),
+      },
     ],
   },
 ]);
